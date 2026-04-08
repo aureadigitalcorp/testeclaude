@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { signToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 
-// Simple hash function for internal use (no bcrypt needed for internal tool)
 async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(password + (process.env.PASSWORD_SALT || "lucrofy-salt"));
@@ -17,12 +16,12 @@ export async function POST(request: NextRequest) {
     const { name, email, password } = await request.json();
 
     if (!email || !password) {
-      return NextResponse.json({ error: "Email e senha são obrigatórios" }, { status: 400 });
+      return NextResponse.json({ error: "Email e senha sao obrigatorios" }, { status: 400 });
     }
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      return NextResponse.json({ error: "Email já cadastrado" }, { status: 409 });
+      return NextResponse.json({ error: "Email ja cadastrado" }, { status: 409 });
     }
 
     const hashedPassword = await hashPassword(password);
@@ -36,13 +35,14 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 7,
       path: "/",
     });
 
     return NextResponse.json({ user: { id: user.id, name: user.name, email: user.email } });
   } catch (error) {
-    console.error("Register error:", error);
-    return NextResponse.json({ error: "Erro ao criar conta" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Erro desconhecido";
+    console.error("Register error:", message, error);
+    return NextResponse.json({ error: `Erro ao criar conta: ${message}` }, { status: 500 });
   }
 }
